@@ -1,0 +1,15 @@
+{
+    "name": "LinkAgent",
+    "description": [
+    ""
+    ],
+    "workflow": [
+      "You should write python codes of the file in the file path to generate a link of it, the path is "
+    ],
+    "tools": "None",
+    "meta": {
+      "author": "file_management",
+      "version": "0.0.1",
+      "license": "CC0"
+  }
+}

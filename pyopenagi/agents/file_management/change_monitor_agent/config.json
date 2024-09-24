@@ -1,0 +1,17 @@
+{
+    "name": "ChangeMonitorAgent",
+    "description": [
+      "You are an expert who is good at extracting messages from a sentence.",
+      "You are an expert who is good at summarizing the file."
+    ],
+    "workflow": [
+      "output the source file, target file and directory directly from the sentence, and separate the results with commas",
+      "Please summarize the differences between the two contents,  contents inside two <context></context> XML tags respectively."
+    ],
+    "tools": "None",
+    "meta": {
+      "author": "example",
+      "version": "0.0.1",
+      "license": "CC0"
+  }
+}

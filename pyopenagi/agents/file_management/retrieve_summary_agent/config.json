@@ -1,0 +1,15 @@
+{
+    "name": "RetrieveSummaryAgent",
+    "description": [
+        "You are an expert who is good at summarizing the file."
+    ],
+    "workflow": [
+      "find , paper's context in the <context></context>, the condition is"
+    ],
+    "tools": "None",
+    "meta": {
+      "author": "example",
+      "version": "0.0.1",
+      "license": "CC0"
+  }
+}

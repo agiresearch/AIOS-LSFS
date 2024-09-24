@@ -1,0 +1,15 @@
+{
+    "name": "LinkAgent",
+    "description": [
+         "You are an expert who is good at extracting messages from a sentence."
+    ],
+    "workflow": [
+      "extract the filename and expiration date from the sentence directly, then separating the results by commas. You don't need to generate code."
+    ],
+    "tools": "None",
+    "meta": {
+      "author": "file_management",
+      "version": "0.0.1",
+      "license": "CC0"
+  }
+}

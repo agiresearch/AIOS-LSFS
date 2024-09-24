@@ -1,0 +1,16 @@
+{
+    "name": "ChangeMonitorAgent",
+    "description": [
+        "You are an expert who is good at extracting messages from the word."
+    ],
+    "workflow": [
+      "extract the path or name from the sentence and the target language, then output the answer directly,the answers need to be separated by commas, the sentence is",
+      "translating the text, inside <context></context> XML tags, into"
+    ],
+    "tools": "None",
+    "meta": {
+      "author": "example",
+      "version": "0.0.1",
+      "license": "CC0"
+  }
+}
