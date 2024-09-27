@@ -2,7 +2,7 @@ import time
 from threading import Thread
 
 from aios.hooks.stores._global import global_llm_req_queue_add_message
-from .agent_process import AgentProcess
+from ...aios.hooks.request import AgentProcess
 from ..utils.logger import AgentLogger
 
 

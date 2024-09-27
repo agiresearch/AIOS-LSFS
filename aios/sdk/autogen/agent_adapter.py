@@ -3,37 +3,23 @@ import inspect
 import logging
 import warnings
 from collections import defaultdict
-from typing import (
-    Optional,
-    Callable,
-    Union,
-    List,
-    Dict,
-    Literal, Any, Tuple
-)
+from typing import Optional, Callable, Union, List, Dict, Literal, Any, Tuple
 
 from autogen._pydantic import model_dump
 from autogen.coding import CodeExecutorFactory
 from autogen.io import IOStream
 
-from pyopenagi.agents.agent_process import AgentProcessFactory
+from aios.hooks.request import AgentProcessFactory
 from termcolor import colored
 
 try:
-    from autogen import (
-        OpenAIWrapper,
-        ConversableAgent,
-        Agent
-    )
+    from autogen import OpenAIWrapper, ConversableAgent, Agent
     from autogen.code_utils import (
         content_str,
         decide_use_docker,
-        check_can_use_docker_or_throw
+        check_can_use_docker_or_throw,
     )
-    from autogen.runtime_logging import (
-        logging_enabled,
-        log_new_agent
-    )
+    from autogen.runtime_logging import logging_enabled, log_new_agent
 except ImportError:
     raise ImportError(
         "Could not import autogen python package. "
@@ -44,20 +30,20 @@ logger = logging.getLogger(__name__)
 
 
 def adapter_autogen_agent_init(
-        self,
-        name: str,
-        system_message: Optional[Union[str, List]] = "You are a helpful AI Assistant.",
-        is_termination_msg: Optional[Callable[[Dict], bool]] = None,
-        max_consecutive_auto_reply: Optional[int] = None,
-        human_input_mode: Literal["ALWAYS", "NEVER", "TERMINATE"] = "TERMINATE",
-        function_map: Optional[Dict[str, Callable]] = None,
-        code_execution_config: Union[Dict, Literal[False]] = False,
-        llm_config: Optional[Union[Dict, Literal[False]]] = None,
-        default_auto_reply: Union[str, Dict] = "",
-        description: Optional[str] = None,
-        chat_messages: Optional[Dict[Agent, List[Dict]]] = None,
-        silent: Optional[bool] = None,
-        agent_process_factory: Optional[AgentProcessFactory] = None,
+    self,
+    name: str,
+    system_message: Optional[Union[str, List]] = "You are a helpful AI Assistant.",
+    is_termination_msg: Optional[Callable[[Dict], bool]] = None,
+    max_consecutive_auto_reply: Optional[int] = None,
+    human_input_mode: Literal["ALWAYS", "NEVER", "TERMINATE"] = "TERMINATE",
+    function_map: Optional[Dict[str, Callable]] = None,
+    code_execution_config: Union[Dict, Literal[False]] = False,
+    llm_config: Optional[Union[Dict, Literal[False]]] = None,
+    default_auto_reply: Union[str, Dict] = "",
+    description: Optional[str] = None,
+    chat_messages: Optional[Dict[Agent, List[Dict]]] = None,
+    silent: Optional[bool] = None,
+    agent_process_factory: Optional[AgentProcessFactory] = None,
 ):
     if agent_process_factory:
         self.agent_process_factory = agent_process_factory
@@ -65,16 +51,22 @@ def adapter_autogen_agent_init(
 
     # just save tool/function message in aios
     self.llm_config = {} if llm_config is not False else False
-    self.client = None if (self.llm_config is False or not self.agent_process_factory) else OpenAIWrapper(
-        **self.llm_config,
-        agent_process_factory=self.agent_process_factory,
-        agent_name=self.agent_name
+    self.client = (
+        None
+        if (self.llm_config is False or not self.agent_process_factory)
+        else OpenAIWrapper(
+            **self.llm_config,
+            agent_process_factory=self.agent_process_factory,
+            agent_name=self.agent_name,
+        )
     )
 
     # we change code_execution_config below and we have to make sure we don't change the input
     # in case of UserProxyAgent, without this we could even change the default value {}
     code_execution_config = (
-        code_execution_config.copy() if hasattr(code_execution_config, "copy") else code_execution_config
+        code_execution_config.copy()
+        if hasattr(code_execution_config, "copy")
+        else code_execution_config
     )
 
     self._name = name
@@ -101,21 +93,31 @@ def adapter_autogen_agent_init(
 
     self.human_input_mode = human_input_mode
     self._max_consecutive_auto_reply = (
-        max_consecutive_auto_reply if max_consecutive_auto_reply is not None else self.MAX_CONSECUTIVE_AUTO_REPLY
+        max_consecutive_auto_reply
+        if max_consecutive_auto_reply is not None
+        else self.MAX_CONSECUTIVE_AUTO_REPLY
     )
     self._consecutive_auto_reply_counter = defaultdict(int)
     self._max_consecutive_auto_reply_dict = defaultdict(self.max_consecutive_auto_reply)
     self._function_map = (
         {}
         if function_map is None
-        else {name: callable for name, callable in function_map.items() if self._assert_valid_name(name)}
+        else {
+            name: callable
+            for name, callable in function_map.items()
+            if self._assert_valid_name(name)
+        }
     )
     self._default_auto_reply = default_auto_reply
     self._reply_func_list = []
     self._human_input = []
     self.reply_at_receive = defaultdict(bool)
     self.register_reply([Agent, None], ConversableAgent.generate_oai_reply)
-    self.register_reply([Agent, None], ConversableAgent.a_generate_oai_reply, ignore_async_in_sync_chat=True)
+    self.register_reply(
+        [Agent, None],
+        ConversableAgent.a_generate_oai_reply,
+        ignore_async_in_sync_chat=True,
+    )
 
     # Setting up code execution.
     # Do not register code execution reply if code execution is disabled.
@@ -151,28 +153,45 @@ def adapter_autogen_agent_init(
                 )
 
             # Use the new code executor.
-            self._code_executor = CodeExecutorFactory.create(self._code_execution_config)
-            self.register_reply([Agent, None], ConversableAgent._generate_code_execution_reply_using_executor)
+            self._code_executor = CodeExecutorFactory.create(
+                self._code_execution_config
+            )
+            self.register_reply(
+                [Agent, None],
+                ConversableAgent._generate_code_execution_reply_using_executor,
+            )
         else:
             # Legacy code execution using code_utils.
             use_docker = self._code_execution_config.get("use_docker", None)
             use_docker = decide_use_docker(use_docker)
             check_can_use_docker_or_throw(use_docker)
             self._code_execution_config["use_docker"] = use_docker
-            self.register_reply([Agent, None], ConversableAgent.generate_code_execution_reply)
+            self.register_reply(
+                [Agent, None], ConversableAgent.generate_code_execution_reply
+            )
     else:
         # Code execution is disabled.
         self._code_execution_config = False
 
     self.register_reply([Agent, None], ConversableAgent.generate_tool_calls_reply)
-    self.register_reply([Agent, None], ConversableAgent.a_generate_tool_calls_reply, ignore_async_in_sync_chat=True)
+    self.register_reply(
+        [Agent, None],
+        ConversableAgent.a_generate_tool_calls_reply,
+        ignore_async_in_sync_chat=True,
+    )
     self.register_reply([Agent, None], ConversableAgent.generate_function_call_reply)
     self.register_reply(
-        [Agent, None], ConversableAgent.a_generate_function_call_reply, ignore_async_in_sync_chat=True
+        [Agent, None],
+        ConversableAgent.a_generate_function_call_reply,
+        ignore_async_in_sync_chat=True,
     )
-    self.register_reply([Agent, None], ConversableAgent.check_termination_and_human_reply)
     self.register_reply(
-        [Agent, None], ConversableAgent.a_check_termination_and_human_reply, ignore_async_in_sync_chat=True
+        [Agent, None], ConversableAgent.check_termination_and_human_reply
+    )
+    self.register_reply(
+        [Agent, None],
+        ConversableAgent.a_check_termination_and_human_reply,
+        ignore_async_in_sync_chat=True,
     )
 
     # Registered hooks are kept in lists, indexed by hookable method, to be called in their order of registration.
@@ -187,7 +206,9 @@ def adapter_autogen_agent_init(
 def _adapter_print_received_message(self, message: Union[Dict, str], sender: Agent):
     iostream = IOStream.get_default()
     # print the message received
-    iostream.print(colored(sender.name, "yellow"), "(to", f"{self.name}):\n", flush=True)
+    iostream.print(
+        colored(sender.name, "yellow"), "(to", f"{self.name}):\n", flush=True
+    )
     message = self._message_to_dict(message)
 
     if message.get("tool_responses"):  # Handle tool multi-call responses
@@ -213,14 +234,13 @@ def _adapter_print_received_message(self, message: Union[Dict, str], sender: Age
                 content = OpenAIWrapper.instantiate(
                     content,
                     message["context"],
-                    self.llm_config and self.llm_config.get("allow_format_str_template", False),
+                    self.llm_config
+                    and self.llm_config.get("allow_format_str_template", False),
                 )
             iostream.print(content_str(content), flush=True)
         if "function_call" in message and message["function_call"]:
             function_call = dict(message["function_call"])
-            func_print = (
-                f"***** Suggested function call: {function_call.get('name', '(No function name found)')} *****"
-            )
+            func_print = f"***** Suggested function call: {function_call.get('name', '(No function name found)')} *****"
             iostream.print(colored(func_print, "green"), flush=True)
             iostream.print(
                 "Arguments: \n",
@@ -247,7 +267,9 @@ def _adapter_print_received_message(self, message: Union[Dict, str], sender: Age
     iostream.print("\n", "-" * 80, flush=True, sep="")
 
 
-def _adapter_generate_oai_reply_from_client(self, llm_client, messages, cache) -> Union[str, Dict, None]:
+def _adapter_generate_oai_reply_from_client(
+    self, llm_client, messages, cache
+) -> Union[str, Dict, None]:
     # unroll tool_responses
     all_messages = []
     for message in messages:
@@ -256,20 +278,27 @@ def _adapter_generate_oai_reply_from_client(self, llm_client, messages, cache) -
             all_messages += tool_responses
             # tool role on the parent message means the content is just concatenation of all of the tool_responses
             if message.get("role") != "tool":
-                all_messages.append({key: message[key] for key in message if key != "tool_responses"})
+                all_messages.append(
+                    {key: message[key] for key in message if key != "tool_responses"}
+                )
         else:
             all_messages.append(message)
 
     # TODO: #1143 handle token limit exceeded error
     response = llm_client.create(
-        context=messages[-1].pop("context", None), messages=all_messages, cache=cache, agent=self
+        context=messages[-1].pop("context", None),
+        messages=all_messages,
+        cache=cache,
+        agent=self,
     )
     extracted_response = llm_client.extract_text_or_completion_object(response)[0]
     if extracted_response is None:
         warnings.warn(f"Extracted_response from {response} is None.", UserWarning)
         return None
     # ensure function and tool calls will be accepted when sent back to the LLM
-    if not isinstance(extracted_response, str) and hasattr(extracted_response, "model_dump"):
+    if not isinstance(extracted_response, str) and hasattr(
+        extracted_response, "model_dump"
+    ):
         extracted_response = model_dump(extracted_response)
     if isinstance(extracted_response, dict):
         if extracted_response.get("function_call"):
@@ -278,15 +307,18 @@ def _adapter_generate_oai_reply_from_client(self, llm_client, messages, cache) -
             )
         for tool_call in extracted_response.get("tool_calls") or []:
             tool_call["name"] = self._normalize_name(tool_call["name"])
-            tool_call["function"] = {"name": tool_call["name"], "arguments": str(tool_call["parameters"])}
+            tool_call["function"] = {
+                "name": tool_call["name"],
+                "arguments": str(tool_call["parameters"]),
+            }
     return extracted_response
 
 
 def adapter_generate_tool_calls_reply(
-        self,
-        messages: Optional[List[Dict]] = None,
-        sender: Optional[Agent] = None,
-        config: Optional[Any] = None,
+    self,
+    messages: Optional[List[Dict]] = None,
+    sender: Optional[Agent] = None,
+    config: Optional[Any] = None,
 ) -> Tuple[bool, Union[Dict, None]]:
     """Generate a reply using tool call."""
     if config is None:
@@ -308,7 +340,9 @@ def adapter_generate_tool_calls_reply(
                 loop = asyncio.new_event_loop()
                 close_loop = True
 
-            _, func_return = loop.run_until_complete(self.a_execute_function(function_call))
+            _, func_return = loop.run_until_complete(
+                self.a_execute_function(function_call)
+            )
             if close_loop:
                 loop.close()
         else:
@@ -335,12 +369,19 @@ def adapter_generate_tool_calls_reply(
         return True, {
             "role": "tool",
             "tool_responses": tool_returns,
-            "content": "\n\n".join([self._str_for_tool_response(tool_return) for tool_return in tool_returns]),
+            "content": "\n\n".join(
+                [
+                    self._str_for_tool_response(tool_return)
+                    for tool_return in tool_returns
+                ]
+            ),
         }
     return False, None
 
 
-def adapter_execute_function(self, func_call, verbose: bool = False) -> Tuple[bool, Dict[str, str]]:
+def adapter_execute_function(
+    self, func_call, verbose: bool = False
+) -> Tuple[bool, Dict[str, str]]:
     """Execute a function call and return the result.
 
     Override this function to modify the way to execute function and tool calls.
@@ -391,6 +432,7 @@ def adapter_execute_function(self, func_call, verbose: bool = False) -> Tuple[bo
         "content": str(content),
     }
 
+
 async def _adapter_a_execute_tool_call(self, tool_call):
     id = tool_call["id"]
     function_call = tool_call
@@ -400,6 +442,7 @@ async def _adapter_a_execute_tool_call(self, tool_call):
         "role": "tool",
         "content": func_return.get("content", ""),
     }
+
 
 def adapter_update_tool_signature(self, tool_sig: Union[str, Dict], is_remove: None):
     """update a tool_signature in the LLM configuration for tool_call.
@@ -411,12 +454,16 @@ def adapter_update_tool_signature(self, tool_sig: Union[str, Dict], is_remove: N
 
     if is_remove:
         if "tools" not in self.llm_config.keys():
-            error_msg = "The agent config doesn't have tool {name}.".format(name=tool_sig)
+            error_msg = "The agent config doesn't have tool {name}.".format(
+                name=tool_sig
+            )
             logger.error(error_msg)
             raise AssertionError(error_msg)
         else:
             self.llm_config["tools"] = [
-                tool for tool in self.llm_config["tools"] if tool["function"]["name"] != tool_sig
+                tool
+                for tool in self.llm_config["tools"]
+                if tool["function"]["name"] != tool_sig
             ]
     else:
         if not isinstance(tool_sig, dict):
@@ -425,13 +472,19 @@ def adapter_update_tool_signature(self, tool_sig: Union[str, Dict], is_remove: N
             )
         self._assert_valid_name(tool_sig["function"]["name"])
         if "tools" in self.llm_config:
-            if any(tool["function"]["name"] == tool_sig["function"]["name"] for tool in self.llm_config["tools"]):
-                warnings.warn(f"Function '{tool_sig['function']['name']}' is being overridden.", UserWarning)
+            if any(
+                tool["function"]["name"] == tool_sig["function"]["name"]
+                for tool in self.llm_config["tools"]
+            ):
+                warnings.warn(
+                    f"Function '{tool_sig['function']['name']}' is being overridden.",
+                    UserWarning,
+                )
             self.llm_config["tools"] = [
-                                           tool
-                                           for tool in self.llm_config["tools"]
-                                           if tool.get("function", {}).get("name") != tool_sig["function"]["name"]
-                                       ] + [tool_sig]
+                tool
+                for tool in self.llm_config["tools"]
+                if tool.get("function", {}).get("name") != tool_sig["function"]["name"]
+            ] + [tool_sig]
         else:
             self.llm_config["tools"] = [tool_sig]
 
@@ -441,5 +494,5 @@ def adapter_update_tool_signature(self, tool_sig: Union[str, Dict], is_remove: N
     self.client = OpenAIWrapper(
         **self.llm_config,
         agent_process_factory=self.agent_process_factory,
-        agent_name=self.agent_name
+        agent_name=self.agent_name,
     )

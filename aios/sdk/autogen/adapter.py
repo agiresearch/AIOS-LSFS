@@ -1,4 +1,4 @@
-from pyopenagi.agents.agent_process import AgentProcessFactory
+from aios.hooks.request import AgentProcessFactory
 from typing import Optional
 
 from aios.sdk.autogen.agent_adapter import (

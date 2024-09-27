@@ -2,7 +2,7 @@ from pyopenagi.agents.base_agent import BaseAgent
 
 import time
 
-from pyopenagi.agents.agent_process import AgentProcess
+from aios.hooks.request import AgentProcess
 
 from pyopenagi.utils.chat_template import Query
 from aios.storage.db_sdk import Data_Op

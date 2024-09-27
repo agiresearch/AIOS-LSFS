@@ -3,12 +3,12 @@ import os
 
 
 class AcademicAgent(ReactAgent):
-    def __init__(self, agent_name, task_input, agent_process_factory, log_mode: str):
+    def __init__(self, agent_name, task_input, log_mode: str):
         ReactAgent.__init__(
-            self, agent_name, task_input, agent_process_factory, log_mode
+            self, agent_name, task_input, log_mode
         )
-        self.workflow_mode = "manual"
-        # self.workflow_mode = "automatic"
+        # self.workflow_mode = "manual"
+        self.workflow_mode = "automatic"
 
     def check_path(self, tool_calls):
         script_path = os.path.abspath(__file__)

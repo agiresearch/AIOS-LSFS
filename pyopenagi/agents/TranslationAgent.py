@@ -3,7 +3,7 @@ from pyopenagi.agents.base_agent import BaseAgent
 
 import time
 
-from pyopenagi.agents.agent_process import (
+from aios.hooks.request import (
     AgentProcess
 )
 

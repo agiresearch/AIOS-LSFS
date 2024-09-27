@@ -7,18 +7,20 @@ from ..utils.chat_template import Query
 
 import json
 
+from aios.hooks.request import send_request
+
 class ReactAgent(BaseAgent):
     def __init__(self,
                  agent_name,
                  task_input,
-                 agent_process_factory,
+                #  agent_process_factory,
                  log_mode: str
         ):
         BaseAgent.__init__(
             self,
             agent_name,
             task_input,
-            agent_process_factory,
+            # agent_process_factory,
             log_mode
         )
 
@@ -35,23 +37,25 @@ class ReactAgent(BaseAgent):
         plan_instruction = "".join(
             [
                 f'You are given the available tools from the tool list: {json.dumps(self.tool_info)} to help you solve problems. ',
-                'Generate a plan of steps you need to take. ',
-                'The plan must follow the json format as: ',
+                'Generate a plan with comprehensive yet minimal steps to fulfill the task. ',
+                'The plan must follow the json format as below: ',
                 '[',
                 '{"message": "message_value1","tool_use": [tool_name1, tool_name2,...]}',
                 '{"message": "message_value2", "tool_use": [tool_name1, tool_name2,...]}',
                 '...',
                 ']',
-                'In each step of the planned workflow, you must select the most related tool to use',
-                'Followings are some plan examples:',
+                'In each step of the planned plan, identify tools to use and recognize no tool is necessary. ',
+                'Followings are some plan examples. ',
+                '['
                 '[',
                 '{"message": "gather information from arxiv. ", "tool_use": ["arxiv"]},',
                 '{"message", "write a summarization based on the gathered information. ", "tool_use": []}',
                 '];',
                 '[',
-                '{"message": "identify the tool that you need to call to obtain information. ", "tool_use": ["imdb_top_movies", "imdb_top_series"]},',
-                '{"message", "give recommendations for the user based on the information. ", "tool_use": []}',
-                '];',
+                '{"message": "gather information from arxiv. ", "tool_use": ["arxiv"]},',
+                '{"message", "understand the current methods and propose ideas that can improve ", "tool_use": []}',
+                ']',
+                ']'
             ]
         )
 
@@ -63,7 +67,10 @@ class ReactAgent(BaseAgent):
         else:
             assert self.workflow_mode == "automatic"
             self.messages.append(
-                {"role": "system", "content": prefix + plan_instruction}
+                {"role": "system", "content": prefix}
+            )
+            self.messages.append(
+                {"role": "user", "content": plan_instruction}
             )
 
 
@@ -117,12 +124,10 @@ class ReactAgent(BaseAgent):
             assert self.workflow_mode == "manual"
             workflow = self.manual_workflow()
 
+        self.messages = self.messages[:1] # clear long context
+        
         self.messages.append(
-            {"role": "assistant", "content": f"[Thinking]: The workflow generated for the problem is {json.dumps(workflow)}"}
-        )
-
-        self.messages.append(
-            {"role": "user", "content": "[Thinking]: Follow the workflow to solve the problem step by step. "}
+            {"role": "user", "content": f"[Thinking]: The workflow generated for the problem is {json.dumps(workflow)}. Follow the workflow to solve the problem step by step. "}
         )
 
         if workflow:
@@ -149,7 +154,8 @@ class ReactAgent(BaseAgent):
                     else:
                         selected_tools = None
 
-                    response, start_times, end_times, waiting_times, turnaround_times = self.get_response(
+                    response, start_times, end_times, waiting_times, turnaround_times = send_request(
+                        agent_name=self.agent_name,
                         query = Query(
                             messages = self.messages,
                             tools = selected_tools

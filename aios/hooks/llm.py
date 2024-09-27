@@ -7,7 +7,16 @@ from aios.llm_core.llms import LLM
 
 from aios.scheduler.fifo_scheduler import FIFOScheduler
 
-from aios.hooks.types.llm import AgentSubmitDeclaration, FactoryParams, LLMParams, SchedulerParams, LLMRequestQueue, QueueGetMessage, QueueAddMessage, QueueCheckEmpty
+from aios.hooks.types.llm import (
+    AgentSubmitDeclaration,
+    FactoryParams,
+    LLMParams,
+    SchedulerParams,
+    LLMRequestQueue,
+    QueueGetMessage,
+    QueueAddMessage,
+    QueueCheckEmpty,
+)
 from aios.hooks.validate import validate
 
 from aios.hooks.stores import queue as QueueStore, processes as ProcessStore
@@ -15,15 +24,18 @@ from aios.hooks.stores import queue as QueueStore, processes as ProcessStore
 from aios.hooks.utils import generate_random_string
 
 from pyopenagi.agents.agent_factory import AgentFactory
-from pyopenagi.agents.agent_process import AgentProcessFactory
 
 ids = []
+
 
 @validate(LLMParams)
 def useKernel(params: LLMParams) -> LLM:
     return LLM(**params.model_dump())
 
-def useLLMRequestQueue() -> tuple[LLMRequestQueue, QueueGetMessage, QueueAddMessage, QueueCheckEmpty]:
+
+def useLLMRequestQueue() -> (
+    tuple[LLMRequestQueue, QueueGetMessage, QueueAddMessage, QueueCheckEmpty]
+):
     r_str = generate_random_string()
     _ = LLMRequestQueue()
 
@@ -38,8 +50,8 @@ def useLLMRequestQueue() -> tuple[LLMRequestQueue, QueueGetMessage, QueueAddMess
     def isEmpty():
         return QueueStore.isEmpty(_)
 
-
     return _, getMessage, addMessage, isEmpty
+
 
 @validate(SchedulerParams)
 def useFIFOScheduler(params: SchedulerParams):
@@ -62,10 +74,10 @@ def useFIFOScheduler(params: SchedulerParams):
 
 @validate(FactoryParams)
 def useFactory(params: FactoryParams):
-    process_factory = AgentProcessFactory()
+    # process_factory = AgentProcessFactory()
 
     agent_factory = AgentFactory(
-        agent_process_factory=process_factory,
+        # agent_process_factory=process_factory,
         agent_log_mode=params.log_mode,
     )
 
@@ -76,7 +88,7 @@ def useFactory(params: FactoryParams):
         _submitted_agent: Future = thread_pool.submit(
             agent_factory.run_agent,
             declaration_params.agent_name,
-            declaration_params.task_input
+            declaration_params.task_input,
         )
         # _submitted_agent =
 

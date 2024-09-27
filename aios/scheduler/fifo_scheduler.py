@@ -11,9 +11,9 @@ import traceback
 import time
 
 class FIFOScheduler(BaseScheduler):
-    def __init__(self, llm, log_mode, get_queue_message: QueueGetMessage):
-        super().__init__(llm, log_mode)
-        self.agent_process_queue = Queue()
+    def __init__(self, llm, lsfs, log_mode, get_queue_message: QueueGetMessage):
+        super().__init__(llm, lsfs, log_mode)
+        self.agent_request_queue = Queue()
         self.get_queue_message = get_queue_message
 
     def run(self):
@@ -24,19 +24,21 @@ class FIFOScheduler(BaseScheduler):
                 if there is nothing received in the time interval, it will raise Empty
                 """
 
-                agent_process = self.get_queue_message()
-                agent_process.set_status("executing")
-                self.logger.log(f"{agent_process.agent_name} is executing. \n", "execute")
-                agent_process.set_start_time(time.time())
-                self.execute_request(agent_process)
-                self.logger.log(f"Current request of {agent_process.agent_name} is done. Thread ID is {agent_process.get_pid()}\n", "done")
+                agent_request = self.get_queue_message()
+                
+                agent_request.set_status("executing")
+                self.logger.log(f"{agent_request.agent_name} is executing. \n", "execute")
+                agent_request.set_start_time(time.time())
+                self.execute_request(agent_request)
+                self.logger.log(f"Current request of {agent_request.agent_name} is done. Thread ID is {agent_request.get_pid()}\n", "done")
 
             except Empty:
                 pass
             except Exception:
                 traceback.print_exc()
 
-    def execute_request(self, agent_process):
+    def execute_request(self, agent_request):
+        query_type = agent_request.query.query_type
         self.llm.address_request(
-            agent_process=agent_process
+            agent_request=agent_request
         )

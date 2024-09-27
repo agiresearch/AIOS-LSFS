@@ -2,28 +2,28 @@ import uuid
 import logging
 from logging import ERROR
 
-from typing import (
-    Optional,
-    List,
-    Dict,
-    Any, Union
-)
+from typing import Optional, List, Dict, Any, Union
 
 from autogen.logger.logger_utils import get_current_ts
-from autogen.oai.client import LEGACY_DEFAULT_CACHE_SEED, LEGACY_CACHE_DIR, PlaceHolderClient
+from autogen.oai.client import (
+    LEGACY_DEFAULT_CACHE_SEED,
+    LEGACY_CACHE_DIR,
+    PlaceHolderClient,
+)
 from autogen.oai.openai_utils import get_key
-from autogen.runtime_logging import logging_enabled, log_new_wrapper, log_chat_completion
+from autogen.runtime_logging import (
+    logging_enabled,
+    log_new_wrapper,
+    log_chat_completion,
+)
 from openai import APITimeoutError, APIError
 
-from pyopenagi.agents.agent_process import AgentProcessFactory
+from aios.hooks.request import AgentProcessFactory
 from pyopenagi.utils.chat_template import Query
 from pyopenagi.agents.call_core import CallCore
 
 try:
-    from autogen import (
-        ModelClient, 
-        Cache
-    )
+    from autogen import ModelClient, Cache
 except ImportError:
     raise ImportError(
         "Could not import autogen python package. "
@@ -34,11 +34,14 @@ logger = logging.getLogger(__name__)
 ERROR = None
 
 
-def adapter_autogen_client_init(self, *,
-                                config_list: Optional[List[Dict[str, Any]]] = None,
-                                agent_process_factory: Optional[AgentProcessFactory] = None,
-                                agent_name: Optional[str],
-                                **base_config: Any):
+def adapter_autogen_client_init(
+    self,
+    *,
+    config_list: Optional[List[Dict[str, Any]]] = None,
+    agent_process_factory: Optional[AgentProcessFactory] = None,
+    agent_name: Optional[str],
+    **base_config: Any,
+):
     if agent_name and agent_process_factory:
         self.aios_call = CallCore(agent_name, agent_process_factory, "console")
 
@@ -55,14 +58,18 @@ def adapter_autogen_client_init(self, *,
     self.wrapper_id = id(self)
 
 
-def adapter_client_create(self, **config: Any) -> ModelClient.ModelClientResponseProtocol:
+def adapter_client_create(
+    self, **config: Any
+) -> ModelClient.ModelClientResponseProtocol:
     if ERROR:
         raise ERROR
     invocation_id = str(uuid.uuid4())
     last = len(self._clients) - 1
     # Check if all configs in config list are activated
     non_activated = [
-        client.config["model_client_cls"] for client in self._clients if isinstance(client, PlaceHolderClient)
+        client.config["model_client_cls"]
+        for client in self._clients
+        if isinstance(client, PlaceHolderClient)
     ]
     if non_activated:
         raise RuntimeError(
@@ -134,19 +141,26 @@ def adapter_client_create(self, **config: Any) -> ModelClient.ModelClientRespons
                         )
 
                     # check the filter
-                    pass_filter = filter_func is None or filter_func(context=context, response=response)
+                    pass_filter = filter_func is None or filter_func(
+                        context=context, response=response
+                    )
                     if pass_filter or i == last:
                         return response
                     continue  # filter is not passed; try the next config
         try:
             request_ts = get_current_ts()
-            response, start_times, end_times, waiting_times, turnaround_times = self.aios_call.get_response(
-                query=Query(
-                    messages=params['messages'],
-                    tools=(params["tools"] if "tools" in params else None)
+            response, start_times, end_times, waiting_times, turnaround_times = (
+                self.aios_call.get_response(
+                    query=Query(
+                        messages=params["messages"],
+                        tools=(params["tools"] if "tools" in params else None),
+                    )
                 )
             )
-            response = {'content': response.response_message, 'tool_calls': response.tool_calls}
+            response = {
+                "content": response.response_message,
+                "tool_calls": response.tool_calls,
+            }
         except APITimeoutError as err:
             logger.debug(f"config {i} timed out", exc_info=True)
             if i == last:
@@ -195,7 +209,9 @@ def adapter_client_create(self, **config: Any) -> ModelClient.ModelClientRespons
 
             # response.message_retrieval_function = client.message_retrieval
             # check the filter
-            pass_filter = filter_func is None or filter_func(context=context, response=response)
+            pass_filter = filter_func is None or filter_func(
+                context=context, response=response
+            )
             if pass_filter or i == last:
                 return response
             continue  # filter is not passed; try the next config
@@ -203,7 +219,7 @@ def adapter_client_create(self, **config: Any) -> ModelClient.ModelClientRespons
 
 
 def adapter_client_extract_text_or_completion_object(
-        cls, response: ModelClient.ModelClientResponseProtocol
+    cls, response: ModelClient.ModelClientResponseProtocol
 ) -> Union[List[str], List[ModelClient.ModelClientResponseProtocol.Choice.Message]]:
     """Extract the text or ChatCompletion objects from a completion or chat response.
 

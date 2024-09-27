@@ -10,11 +10,11 @@ import warnings
 from aios.hooks.llm import useFactory, useKernel, useFIFOScheduler
 
 from aios.utils.utils import delete_directories
-from dotenv import load_dotenv
-# import redis
-import logging
 
-logging.basicConfig(filename='rs.log', filemode='a', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from aios.storage.lsfs import LSFS
+
+from dotenv import load_dotenv
+
 def clean_cache(root_directory):
     targets = {
         ".ipynb_checkpoints",
@@ -51,11 +51,16 @@ def main():
         log_mode=llm_kernel_log_mode,
         use_backend=use_backend
     )
+    
+    lsfs = LSFS(
+        mount_dir=os.path.join(os.path.abspath(os.path.abspath(__file__)), "lsfs-test")
+    )
 
     # run agents concurrently for maximum efficiency using a scheduler
 
     startScheduler, stopScheduler = useFIFOScheduler(
         llm=llm,
+        lsfs=lsfs,
         log_mode=scheduler_log_mode,
         get_queue_message=None
     )
@@ -68,11 +73,10 @@ def main():
     startScheduler()
 
     # register your agents and submit agent tasks
-    """ submitAgent(
+    agent_id = submitAgent(
         agent_name="example/academic_agent",
-        task_input="Find recent papers on the impact of social media on mental health in adolescents."
+        task_input="tell me what is the training method used in the prollm paper"
     )
-    """
 
     """
     submitAgent(
@@ -179,10 +183,10 @@ def main():
     #     _res = r.result()
 
 
-    agent_id = submitAgent(
-        agent_name="file_management/retrieve_summary_agent",
-        task_input="Please search for the 2 papers with the highest correlation with large model uncertainty."
-    )
+    # agent_id = submitAgent(
+    #     agent_name="file_management/retrieve_summary_agent",
+    #     task_input="Please search for the 2 papers with the highest correlation with large model uncertainty."
+    # )
     #     agent_factory.run_retrieve,
     #    "file_management/link_agent",
     #     "/Users/manchester/Documents/rag/rag_source/rag_paper/AIOS.pdf ",

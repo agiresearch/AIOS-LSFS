@@ -7,12 +7,13 @@ from ..llm_core.llms import LLM
 
 from ..utils.logger import SchedulerLogger
 class BaseScheduler:
-    def __init__(self, llm: LLM, log_mode):
+    def __init__(self, llm: LLM, lsfs, log_mode):
         self.active = False # start/stop the scheduler
         self.log_mode = log_mode
         self.logger = self.setup_logger()
         self.thread = Thread(target=self.run)
         self.llm = llm
+        self.lsfs = lsfs
 
     def run(self):
         pass
@@ -31,5 +32,7 @@ class BaseScheduler:
         self.active = False
         self.thread.join()
 
-    def execute_request(self, agent_process):
+    def execute_request(self, agent_request):
         pass
+    
+    # the default method used for getting response from AIOS

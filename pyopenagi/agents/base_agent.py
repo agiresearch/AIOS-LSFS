@@ -14,32 +14,16 @@ from ..utils.chat_template import Query
 
 import importlib
 
-from aios.hooks.stores._global import global_llm_req_queue_add_message
-
-
-class CustomizedThread(Thread):
-    def __init__(self, target, args=()):
-        super().__init__()
-        self.target = target
-        self.args = args
-        self.result = None
-
-    def run(self):
-        self.result = self.target(*self.args)
-
-    def join(self):
-        super().join()
-        return self.result
-
+from aios.hooks.request import send_request
 
 class BaseAgent:
-    def __init__(self, agent_name, task_input, agent_process_factory, log_mode: str):
+    def __init__(self, agent_name, task_input, log_mode: str):
         # super().__init__()
         self.agent_name = agent_name
         self.config = self.load_config()
         self.tool_names = self.config["tools"]
 
-        self.agent_process_factory = agent_process_factory
+        # self.agent_process_factory = agent_process_factory
 
         self.tool_list = dict()
         self.tools = []
@@ -67,7 +51,10 @@ class BaseAgent:
     def run(self):
         """Execute each step to finish the task."""
         # self.set_aid(threading.get_ident())
-        self.logger.log(f"{self.agent_name} starts running. Agent ID is {self.get_aid()}\n", level="info")
+        self.logger.log(
+            f"{self.agent_name} starts running. Agent ID is {self.get_aid()}\n",
+            level="info",
+        )
 
     # can be customization
     def build_system_instruction(self):
@@ -91,11 +78,10 @@ class BaseAgent:
 
     def automatic_workflow(self):
         for i in range(self.plan_max_fail_times):
-            response, start_times, end_times, waiting_times, turnaround_times = (
-                self.get_response(
-                    query=Query(
-                        messages=self.messages, tools=None, message_return_type="json"
-                    )
+            response, start_times, end_times, waiting_times, turnaround_times = send_request(
+                agent_name = self.agent_name,
+                query=Query(
+                    messages=self.messages, tools=None, message_return_type="json"
                 )
             )
 
@@ -149,9 +135,9 @@ class BaseAgent:
         return "".join(x.title() for x in components)
 
     def load_tools(self, tool_names):
-        if tool_names == 'None':
-            return 
-        
+        if tool_names == "None":
+            return
+
         for tool_name in tool_names:
             org, name = tool_name.split("/")
             module_name = ".".join(["pyopenagi", "tools", org, name])
@@ -191,74 +177,6 @@ class BaseAgent:
         with open(config_file, "r") as f:
             config = json.load(f)
             return config
-
-    # the default method used for getting response from AIOS
-    def get_response(self, query, temperature=0.0):
-
-        # thread = CustomizedThread(target=self.query_loop, args=(query, ))
-        # thread.start()
-        # return thread.join()
-        return self.query_loop(query)
-
-    def query_loop(self, query):
-        agent_process = self.create_agent_request(query)
-
-        completed_response, start_times, end_times, waiting_times, turnaround_times = (
-            "",
-            [],
-            [],
-            [],
-            [],
-        )
-
-        while agent_process.get_status() != "done":
-            # thread = Thread(target=self.listen, args=(agent_process, ))
-            current_time = time.time()
-            # reinitialize agent status
-            agent_process.set_created_time(current_time)
-            agent_process.set_response(None)
-
-            global_llm_req_queue_add_message(agent_process)
-
-            # thread.start()
-            # thread.join()
-            agent_process.start()
-            agent_process.join()
-
-            completed_response = agent_process.get_response()
-            if agent_process.get_status() != "done":
-                self.logger.log(
-                    f"Suspended due to the reach of time limit ({agent_process.get_time_limit()}s). Current result is: {completed_response.response_message}\n",
-                    level="suspending",
-                )
-            start_time = agent_process.get_start_time()
-            end_time = agent_process.get_end_time()
-            waiting_time = start_time - agent_process.get_created_time()
-            turnaround_time = end_time - agent_process.get_created_time()
-
-            start_times.append(start_time)
-            end_times.append(end_time)
-            waiting_times.append(waiting_time)
-            turnaround_times.append(turnaround_time)
-            # Re-start the thread if not done
-
-        # self.agent_process_factory.deactivate_agent_process(agent_process.get_pid())
-
-        return (
-            completed_response,
-            start_times,
-            end_times,
-            waiting_times,
-            turnaround_times,
-        )
-
-    def create_agent_request(self, query):
-        agent_process = self.agent_process_factory.activate_agent_process(
-            agent_name=self.agent_name, query=query
-        )
-        agent_process.set_created_time(time.time())
-        # print("Already put into the queue")
-        return agent_process
 
     def set_aid(self, aid):
         self.aid = aid
