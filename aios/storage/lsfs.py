@@ -15,7 +15,7 @@ class LSFSSupervisor(FileSystemEventHandler):
     def __init__(self, mount_dir) -> None:
         self.mount_dir = mount_dir
         # self.db = Redis()
-        self.vector_db = ChromaDB(mount_dir=mount_dir)
+        # self.vector_db = ChromaDB(mount_dir=mount_dir)
         self.is_start = False
 
     def terminate(self):
@@ -135,7 +135,7 @@ class LSFSParser:
                             },
                             "k": {
                                 "type": "string",
-                                "default": "1.0",
+                                "default": "1",
                                 "description": "top k files to be retrieved",
                             },
                             "keywords": {
@@ -161,7 +161,7 @@ class LSFSParser:
                             },
                             "n": {
                                 "type": "string",
-                                "default": "1.0",
+                                "default": "1",
                                 "description": "the number of versions to rollback",
                             },
                             "time": {
@@ -269,7 +269,12 @@ class LSFS:
         pass
 
     def retrieve_summary(self, params):
-        pass
+        print(params)
+        name = params["name"] if "name" in params else None
+        k = params["k"] if "k" in params else None
+        keywords = params["keywords"] if "keywords" in params else None
+        if k and keywords:
+            self.vector_db.retrieve(name, k, keywords)
 
     def change_summary(self, params):
         pass

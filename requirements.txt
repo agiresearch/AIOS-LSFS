@@ -21,6 +21,5 @@ torch
 transformers
 accelerate
 anthropic
-platformdirs
 watchdog
 llama-index-embeddings-huggingface

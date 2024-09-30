@@ -53,7 +53,7 @@ def main():
     )
     
     lsfs = LSFS(
-        mount_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "lsfs-test1")
+        mount_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "lsfs-test")
     )
 
     # run agents concurrently for maximum efficiency using a scheduler
@@ -74,7 +74,7 @@ def main():
     
     agent_tasks = [
         # ["example/academic_agent", "tell me what prollm is mainly about? "],
-        ["file_management/retrieve_agent", "Summarize the content of the top 2 papers related to kv-cache compression."]
+        ["file_management/retrieve_agent", "Search papers written by Mingyu Jin about protein."]
     ]
     
     for (name, task) in agent_tasks:

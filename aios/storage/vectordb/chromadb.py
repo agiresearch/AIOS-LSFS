@@ -8,6 +8,7 @@ from watchdog.events import FileSystemEventHandler
 import os
 
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
 # from chromadb.utils import embedding_functions
 
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
@@ -20,13 +21,20 @@ class ChromaDB(BaseVectorDB):
         super().__init__()
         self.mount_dir = mount_dir
         # self.build_database()
-        
-        self.client = chromadb.PersistentClient(path=self.mount_dir)
-        collection_name = os.path.splitext(self.mount_dir)[0]
+
+        mounted_fs_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "mounted_fs"
+        )
+
+        self.client = chromadb.PersistentClient(mounted_fs_dir)
+        # print(self.mount_dir)
+        collection_name = os.path.basename(self.mount_dir)
+
+        # print(collection_name)
         self.collection = self.client.get_or_create_collection(name=collection_name)
-        # script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"../{client_name}")
-        # self.client = chromadb.PersistentClient(path=script_dir)
-        self.embedding_function = HuggingFaceEmbedding(model_name="BAAI/bge-base-en-v1.5", truncate_dim=384)
+
+        # if not os.path.exists(os.path.join(mounted_fs_dir, "chroma.sqlite3")):
+        # self.build_database()
 
     # add collection
     def build_database(self):
@@ -35,11 +43,10 @@ class ChromaDB(BaseVectorDB):
             for file in files:
                 file_path = os.path.join(subdir, file)
                 file_name = os.path.splitext(file)[0]
-                # if collection_name == ".DS_Store":
-                #     continue
-                self.add_or_update_file_in_collection(
-                    file_path, file_name
-                )
+                # print(file_path, file_name)
+                if file_name == ".DS_Store":
+                    continue
+                self.add_or_update_file_in_collection(file_path, file_name)
 
     def add_or_update_file_in_collection(self, file_path, file_name):
         """
@@ -51,26 +58,25 @@ class ChromaDB(BaseVectorDB):
         documents = SimpleDirectoryReader(input_files=[file_path]).load_data()
         content = " ".join([doc.text for doc in documents])
 
+        # print(content[:500])
+
         # collection = client.get_or_create_collection(name=collection_name)
 
-        existing_docs = self.collection.get(ids=[file_path])
+        existing_docs = self.collection.get(ids=[file_name])
 
         if existing_docs["ids"]:
             doc_id = existing_docs["ids"]
             self.collection.update(
                 documents=[content],
-                ids=[doc_id],
-                metadatas=[
-                    {"file_path": file_path, "file_name": file_name}
-                ]
+                ids=doc_id,
+                metadatas=[{"file_path": file_path, "file_name": file_name}],
             )
         else:
             # doc_id = str(uuid.uuid4())
             self.collection.add(
-                documents=[content], ids=[file_path], 
-                metadatas=[
-                    {"file_path": file_path, "file_name": file_name}
-                ]
+                documents=[content],
+                ids=[file_name],
+                metadatas=[{"file_path": file_path, "file_name": file_name}],
             )
 
     def delete_file_from_collection(self, client, collection_name, file_path):
@@ -89,3 +95,8 @@ class ChromaDB(BaseVectorDB):
             collection.delete(ids=[file_path])
         else:
             print(f"No document found for deleted file: {file_path}")
+
+    def retrieve(self, name, k, keywords):
+        results = self.collection.query(query_texts=[keywords], n_results=int(k))
+        print([doc[:500] for doc in results["documents"][0]])
+        print(results["metadatas"])
