@@ -8,6 +8,8 @@ from watchdog.events import FileSystemEventHandler
 
 import os
 
+from pyopenagi.utils.chat_template import Query
+
 
 class LSFSSupervisor(FileSystemEventHandler):
     def __init__(self, mount_dir) -> None:
@@ -58,34 +60,222 @@ class LSFSSupervisor(FileSystemEventHandler):
         )
 
 
+class LSFSParser:
+    def __init__(self, llm) -> None:
+        self.llm = llm
+        self.api_call_format = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "create_file",
+                    "description": "create a file",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "name of the file",
+                            }
+                        },
+                        "required": ["name"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "create_directory",
+                    "description": "create a directory",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "name of the directory",
+                            }
+                        },
+                        "required": ["name"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "change_summary",
+                    "description": "change file or change directory",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "src": {
+                                "type": "string",
+                                "description": "source name of the file or directory",
+                            }
+                        },
+                        "properties": {
+                            "target": {
+                                "type": "string",
+                                "description": "target name of the file or directory",
+                            }
+                        },
+                        "required": ["src", "target"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "retrieve_summary",
+                    "description": "retrieve files and summary the content",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "name of the file",
+                            },
+                            "k": {
+                                "type": "string",
+                                "default": "1.0",
+                                "description": "top k files to be retrieved",
+                            },
+                            "keywords": {
+                                "type": "string",
+                                "description": "keywords used to describe how to locate the files",
+                            },
+                        },
+                        "required": ["k", "keywords"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "rollback",
+                    "description": "rollback a file to a specific version",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "name of the file",
+                            },
+                            "n": {
+                                "type": "string",
+                                "default": "1.0",
+                                "description": "the number of versions to rollback",
+                            },
+                            "time": {
+                                "type": "string",
+                                "description": "the specific time of a file version",
+                            },
+                        },
+                        "required": ["name"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "link",
+                    "description": "generate a link for a file",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "name of the file",
+                            }
+                        },
+                        "required": [],
+                    },
+                },
+            },
+        ]
+        self.system_instruction = " ".join(
+            [
+                "You are a good parser to parse natural prompts into executable API calls. ",
+                "Given a query, identify the functions to call. ",
+            ]
+        )
+
+    def parse(self, agent_request):
+
+        task_input = agent_request.query.messages[1]["content"]
+        step_instruction = agent_request.query.messages[-1]["content"]
+
+        messages = [
+            {"role": "system", "content": self.system_instruction},
+            {
+                "role": "user",
+                "content": "The task is: " + task_input + step_instruction,
+            },
+        ]
+        query = Query(
+            messages=messages, tools=self.api_call_format, action_type="message_llm"
+        )
+        agent_request.query = query
+
+        self.llm.address_request(agent_request)
+
+        response = agent_request.get_response()
+        api_calls = response.tool_calls
+
+        return api_calls
+
+
 class LSFS:
     def __init__(self, mount_dir) -> None:
         self.mount_dir = mount_dir
-        self.event_handler = LSFSSupervisor(mount_dir=mount_dir)
-        self.observer = Observer()
+        self.vector_db = ChromaDB(mount_dir=mount_dir)
+        # self.event_handler = LSFSSupervisor(mount_dir=mount_dir)
+        # self.observer = Observer()
         self.is_start = False
+        self.api_map = {
+            "create_file": self.create_file,
+            "create_directory": self.create_directory,
+            "change_summary": self.change_summary,
+            "retrieve_summary": self.retrieve_summary,
+            "rollback": self.rollback,
+            "link": self.link,
+        }
+        # self.lsfs_parser = LSFSParser()
 
     def start(self):
         self.is_start = True
-        self.observer.schedule(self.event_handler, self.mount_dir, recursive=True)
-        self.observer.start()
-        while self.is_start:
-            pass
-        self.observer.join()
+        # self.observer.schedule(self.event_handler, self.mount_dir, recursive=True)
+        # self.observer.start()
+        # while self.is_start:
+        #     pass
+        # self.observer.join()
 
-    class LSFSParser:
-        def __init__(self) -> None:
-            pass
+    def execute_calls(self, api_calls):
+        # pass
+        # print(agent_request)
+        # api_calls = self.lsfs_parser.parse(agent_request)
+        for api_call in api_calls:
+            name, params = api_call["name"], api_call["parameters"]
+            # print(name, params)
+            self.api_map[name](params)
+            # self.api_map[name](params=params)
 
     def terminate(self):
         self.is_start = False
-        self.observer.stop()
+        # self.observer.stop()
 
-    def semantic_retrieve(self):
+    def create_file(self, params):
         pass
 
-    def keyword_retrieve(self):
+    def create_directory(self, params):
         pass
 
-    def rollback(self):
+    def retrieve_summary(self, params):
+        pass
+
+    def change_summary(self, params):
+        pass
+
+    def rollback(self, params):
+        pass
+
+    def link(self, params):
         pass

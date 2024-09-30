@@ -19,12 +19,19 @@ class ChromaDB(BaseVectorDB):
     def __init__(self, mount_dir) -> None:
         super().__init__()
         self.mount_dir = mount_dir
+        self.build_database()
+        
+        # self.client = chromadb.PersistentClient(path=self.mount_dir)
+        # collection_name = os.path.splitext(self.mount_dir)[0]
+        # self.collection = self.client.create_collection(name=collection_name)
         # script_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"../{client_name}")
         # self.client = chromadb.PersistentClient(path=script_dir)
         # self.embedding_function = HuggingFaceEmbedding(model_name="BAAI/bge-base-en-v1.5", truncate_dim=384)
 
     # add collection
     def build_database(self):
+        # for subdir, _, files in os.walk(self.mount_dir):
+            
         for subdir, _, files in os.walk(self.mount_dir):
             # Use subfolder as the PersistentClient database directory
             client_settings = Settings(persist_directory=subdir)

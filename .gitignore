@@ -204,3 +204,6 @@ metagpt
 workspace
 
 cache
+lsfs-test/**/*.pdf
+
+lsfs-venv/

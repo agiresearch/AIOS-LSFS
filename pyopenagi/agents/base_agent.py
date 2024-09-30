@@ -22,6 +22,9 @@ class BaseAgent:
         self.agent_name = agent_name
         self.config = self.load_config()
         self.tool_names = self.config["tools"]
+        
+        self.plan_max_fail_times = 3
+        self.tool_call_max_fail_times = 3
 
         # self.agent_process_factory = agent_process_factory
 

@@ -1,55 +1,73 @@
-from ...react_agent import ReactAgent
-
 from ...base_agent import BaseAgent
-
 import os
-import time
 
-from aios.hooks.request import send_request
+import time
 
 from pyopenagi.utils.chat_template import Query
 
 import json
 
+from aios.hooks.request import send_request
 
-class AcademicAgent(BaseAgent):
+class RetrieveAgent(BaseAgent):
     def __init__(self, agent_name, task_input, log_mode: str):
-        ReactAgent.__init__(self, agent_name, task_input, log_mode)
+        super().__init__(agent_name, task_input, log_mode)
         self.workflow_mode = "manual"
-        # self.workflow_mode = "automatic"
 
-    def check_path(self, tool_calls):
-        script_path = os.path.abspath(__file__)
-        save_dir = os.path.join(
-            os.path.dirname(script_path), "output"
-        )  # modify the customized output path for saving outputs
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        for tool_call in tool_calls:
-            try:
-                for k in tool_call["parameters"]:
-                    if "path" in k:
-                        path = tool_call["parameters"][k]
-                        if not path.startswith(save_dir):
-                            tool_call["parameters"][k] = os.path.join(
-                                save_dir, os.path.basename(path)
-                            )
-            except Exception:
-                continue
-        return tool_calls
+    def build_system_instruction(self):
+        prefix = "".join(
+            [
+                "".join(self.config["description"])
+            ]
+        )
+
+        plan_instruction = "".join(
+            [
+                f'You are given the available tools from the tool list: {json.dumps(self.tool_info)} to help you solve problems. ',
+                'Generate a plan with comprehensive yet minimal steps to fulfill the task. ',
+                'The plan must follow the json format as below: ',
+                '[',
+                '{"message": "message_value1","tool_use": [tool_name1, tool_name2,...]}',
+                '{"message": "message_value2", "tool_use": [tool_name1, tool_name2,...]}',
+                '...',
+                ']',
+                'In each step of the planned plan, identify tools to use and recognize no tool is necessary. ',
+                'Followings are some plan examples. ',
+                '['
+                '[',
+                '{"message": "gather information from arxiv. ", "tool_use": ["arxiv"]},',
+                '{"message", "write a summarization based on the gathered information. ", "tool_use": []}',
+                '];',
+                '[',
+                '{"message": "gather information from arxiv. ", "tool_use": ["arxiv"]},',
+                '{"message", "understand the current methods and propose ideas that can improve ", "tool_use": []}',
+                ']',
+                ']'
+            ]
+        )
+
+        if self.workflow_mode == "manual":
+            self.messages.append(
+                {"role": "system", "content": prefix}
+            )
+
+        else:
+            assert self.workflow_mode == "automatic"
+            self.messages.append(
+                {"role": "system", "content": prefix + plan_instruction}
+            )
+            # self.messages.append(
+            #     {"role": "user", "content": plan_instruction}
+            # )
+
+
+    def automatic_workflow(self):
+        return super().automatic_workflow()
 
     def manual_workflow(self):
         workflow = [
-            {
-                "action_type": "message_llm",
-                "action": "Search for relevant papers",
-                "tool_use": ["arxiv"],
-            },
-            {
-                "action_type": "message_llm",
-                "action": "Provide responses based on the user's query",
-                "tool_use": [],
-            }
+            {"action_type": "operate_file", "action": "locate the file and retrieve the content of this file", "tool_use": []},
+            {"action_type": "message_llm", "action": "generate the answer based on the user's requirements ", "tool_use": []},
         ]
         return workflow
 
@@ -77,14 +95,16 @@ class AcademicAgent(BaseAgent):
                 success = False
 
         return actions, observations, success
-    
+
     def run(self):
         super().run()
+        
         self.build_system_instruction()
 
         task_input = self.task_input
 
         self.messages.append({"role": "user", "content": task_input})
+        
         self.logger.log(f"{task_input}\n", level="info")
 
         workflow = None
@@ -95,7 +115,7 @@ class AcademicAgent(BaseAgent):
             assert self.workflow_mode == "manual"
             workflow = self.manual_workflow()
 
-        self.messages = self.messages[:1]  # clear long context
+        self.messages = self.messages[:2]  # clear long-context to generate workflow
 
         self.messages.append(
             {
@@ -103,14 +123,6 @@ class AcademicAgent(BaseAgent):
                 "content": f"[Thinking]: The workflow generated for the problem is {json.dumps(workflow)}. Follow the workflow to solve the problem step by step. ",
             }
         )
-
-        # if workflow:
-        #     self.logger.log(f"Generated workflow is: {workflow}\n", level="info")
-        # else:
-        #     self.logger.log(
-        #         "Fail to generate a valid workflow. Invalid JSON?\n", level="info"
-        #     )
-        
         try:
             if workflow:
                 final_result = ""
@@ -120,9 +132,8 @@ class AcademicAgent(BaseAgent):
                     action = step["action"]
                     tool_use = step["tool_use"]
 
-                    prompt = f"At step {i + 1}, you need to: {action}. "
+                    prompt = f"At step {i + 1}, {action}. "
                     self.messages.append({"role": "user", "content": prompt})
-                    
                     if tool_use:
                         selected_tools = self.pre_select_tools(tool_use)
 
@@ -140,7 +151,7 @@ class AcademicAgent(BaseAgent):
                         query=Query(
                             messages=self.messages,
                             tools=selected_tools,
-                            action_type=action_type,
+                            action_type=action_type
                         )
                     )
 
@@ -156,7 +167,7 @@ class AcademicAgent(BaseAgent):
                     self.request_turnaround_times.extend(turnaround_times)
 
                     if tool_calls:
-                        for _ in range(self.plan_max_fail_times):
+                        for _ in range(self.tool_call_max_fail_times):
                             tool_calls = self.check_path(tool_calls)
                             actions, observations, success = self.call_tools(
                                 tool_calls=tool_calls
@@ -214,6 +225,9 @@ class AcademicAgent(BaseAgent):
                     "request_waiting_times": self.request_waiting_times,
                     "request_turnaround_times": self.request_turnaround_times,
                 }
+                
         except Exception as e:
             print(e)
             return {}
+            
+            

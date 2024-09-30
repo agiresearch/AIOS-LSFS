@@ -100,7 +100,10 @@ class LLMRequest(AgentRequest):
 
 
 def send_request(agent_name, query):
-    agent_request = AgentRequest(agent_name=agent_name, query=query)
+    agent_request = AgentRequest(
+        agent_name=agent_name, 
+        query=query
+    )
     agent_request.set_status("active")
 
     completed_response, start_times, end_times, waiting_times, turnaround_times = (
@@ -122,6 +125,7 @@ def send_request(agent_name, query):
         agent_request.join()
 
         completed_response = agent_request.get_response()
+        
         if agent_request.get_status() != "done":
             pass
         start_time = agent_request.get_start_time()

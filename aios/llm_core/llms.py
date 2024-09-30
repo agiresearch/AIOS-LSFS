@@ -66,12 +66,12 @@ class LLM:
                 )
 
     def address_request(self,
-                        agent_process,
+                        agent_request,
                         temperature=0.0) -> None:
         """Address request sent from the agent
 
         Args:
-            agent_process: AgentProcess object that contains request sent from the agent
+            agent_request: AgentProcess object that contains request sent from the agent
             temperature (float, optional): Parameter to control the randomness of LLM output. Defaults to 0.0.
         """
-        self.model.address_request(agent_process,temperature)
+        self.model.address_request(agent_request,temperature)

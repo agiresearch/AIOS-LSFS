@@ -53,7 +53,7 @@ def main():
     )
     
     lsfs = LSFS(
-        mount_dir=os.path.join(os.path.abspath(os.path.abspath(__file__)), "lsfs-test")
+        mount_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "lsfs-test")
     )
 
     # run agents concurrently for maximum efficiency using a scheduler
@@ -71,12 +71,24 @@ def main():
     )
 
     startScheduler()
-
+    
+    agent_tasks = [
+        # ["example/academic_agent", "tell me what prollm is mainly about? "],
+        ["file_management/retrieve_agent", "Summarize the content of the top 2 papers related to kv-cache compression."]
+    ]
+    
+    for (name, task) in agent_tasks:
+        agent_id = submitAgent(
+            agent_name=name,
+            task_input=task
+        )
+        awaitAgentExecution(agent_id)
+        
     # register your agents and submit agent tasks
-    agent_id = submitAgent(
-        agent_name="example/academic_agent",
-        task_input="tell me what is the training method used in the prollm paper"
-    )
+    # agent_id = submitAgent(
+    #     agent_name="file_management/retrieve_agent",
+    #     task_input="Please search for the 2 papers with the highest correlation with large model uncertainty."
+    # )
 
     """
     submitAgent(
@@ -85,12 +97,10 @@ def main():
     )
     """
     
-    """
-    submitAgent(
-        agent_name="example/cocktail_mixlogist",
-        task_input="Create a cocktail for a summer garden party. Guests enjoy refreshing, citrusy flavors. Available ingredients include vodka, gin, lime, lemon, mint, and various fruit juices."
-    )
-    """
+    # agent_id = submitAgent(
+    #     agent_name="example/academic_agent",
+    #     task_input="tell me what prollm is mainly about? "
+    # )
     
     """
     submitAgent(
@@ -108,7 +118,7 @@ def main():
     # time = 0
     # with open('/Users/manchester/Documents/rag/AIOS/test/files10_summary.txt', 'r') as file:
     #     for line in file:
-    #         i +=1
+    #         i += 1
     #         retrieve_summaryagent = agent_thread_pool.submit(
     #                         agent_factory.run_retrieve,
     #                         "file_management/retrieve_summary_agent",
@@ -166,7 +176,7 @@ def main():
     # )
     # agent_tasks = [translation_agent]
     # for r in as_completed(agent_tasks):
-    #         _res = r.result()
+    #      _res = r.result()
 
     # rollback_agent = agent_thread_pool.submit(
     #     agent_factory.run_retrieve,
@@ -195,7 +205,7 @@ def main():
     #     '/Users/manchester/Documents/data/rag_database',
     #     True,
     # )
-    awaitAgentExecution(agent_id)
+    # awaitAgentExecution(agent_id)
     
     # agent_ids = []
     # for agent_name, task_input in agent_tasks:
