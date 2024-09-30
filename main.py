@@ -53,7 +53,7 @@ def main():
     )
     
     lsfs = LSFS(
-        mount_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "lsfs-test")
+        mount_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), "lsfs-test1")
     )
 
     # run agents concurrently for maximum efficiency using a scheduler
