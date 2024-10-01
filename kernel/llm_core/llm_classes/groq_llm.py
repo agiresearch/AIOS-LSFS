@@ -10,7 +10,9 @@ import openai
 from pyopenagi.utils.chat_template import Response
 import json
 
-class GPTLLM(BaseLLM):
+import os
+
+class GroqLLM(BaseLLM):
 
     def __init__(self, llm_name: str,
                  max_gpu_memory: dict = None,
@@ -24,7 +26,10 @@ class GPTLLM(BaseLLM):
                          log_mode)
 
     def load_llm_and_tokenizer(self) -> None:
-        self.model = OpenAI()
+        self.model = OpenAI(
+            base_url="https://api.groq.com/openai/v1",
+            api_key=os.environ.get("GROQ_API_KEY")
+        )
         self.tokenizer = None
 
     def parse_tool_calls(self, tool_calls):
@@ -36,9 +41,7 @@ class GPTLLM(BaseLLM):
                 parsed_tool_calls.append(
                     {
                         "name": function_name,
-                        "parameters": function_args,
-                        "type": tool_call.type,
-                        "id": tool_call.id
+                        "parameters": function_args
                     }
                 )
             return parsed_tool_calls
@@ -49,7 +52,8 @@ class GPTLLM(BaseLLM):
             temperature=0.0
         ):
         # ensures the model is the current one
-        assert re.search(r'gpt', self.model_name, re.IGNORECASE)
+        
+        # assert re.search(r'gpt', self.model_name, re.IGNORECASE)
 
         """ wrapper around openai api """
         agent_request.set_status("executing")
@@ -60,11 +64,7 @@ class GPTLLM(BaseLLM):
             f"{agent_request.agent_name} is switched to executing.\n",
             level = "executing"
         )
-        
-        # print(messages)
-        # print(f"[Tools] {agent_request.query.tools}")
-        
-        # time.sleep(10)
+        # time.sleep(2)
         try:
             response = self.model.chat.completions.create(
                 model=self.model_name,
@@ -74,48 +74,39 @@ class GPTLLM(BaseLLM):
                 max_tokens = self.max_new_tokens
             )
             response_message = response.choices[0].message.content
-            # print(f"[Response] {response}")
             tool_calls = self.parse_tool_calls(
                 response.choices[0].message.tool_calls
             )
-            # print(tool_calls)
-            # print(response.choices[0].message)
-            agent_request.set_response(
-                Response(
-                    response_message = response_message,
-                    tool_calls = tool_calls
-                )
+            
+            response = Response(
+                response_message = response_message,
+                tool_calls = tool_calls
             )
+            
         except openai.APIConnectionError as e:
-            agent_request.set_response(
-                Response(
-                    response_message = f"Server connection error: {e.__cause__}"
-                )
+            response = Response(
+                response_message = f"Server connection error: {e.__cause__}"
             )
+            
         except openai.RateLimitError as e:
-            agent_request.set_response(
-                Response(
-                    response_message = f"OpenAI RATE LIMIT error {e.status_code}: (e.response)"
-                )
+            response = Response(
+                response_message = f"OpenAI RATE LIMIT error {e.status_code}: (e.response)"
             )
+            
         except openai.APIStatusError as e:
-            agent_request.set_response(
-                Response(
-                    response_message = f"OpenAI STATUS error {e.status_code}: (e.response)"
-                )
+            response = Response(
+                response_message = f"OpenAI STATUS error {e.status_code}: (e.response)"
             )
+            
         except openai.BadRequestError as e:
-            agent_request.set_response(
-                Response(
-                    response_message = f"OpenAI BAD REQUEST error {e.status_code}: (e.response)"
-                )
+            response = Response(
+                response_message = f"OpenAI BAD REQUEST error {e.status_code}: (e.response)"
             )
+            
         except Exception as e:
-            agent_request.set_response(
-                Response(
-                    response_message = f"An unexpected error occurred: {e}"
-                )
+            response = Response(
+                response_message = f"An unexpected error occurred: {e}"
             )
 
-        agent_request.set_status("done")
-        agent_request.set_end_time(time.time())
+        return response
+        

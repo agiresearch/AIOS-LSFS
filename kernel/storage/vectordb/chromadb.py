@@ -98,5 +98,6 @@ class ChromaDB(BaseVectorDB):
 
     def retrieve(self, name, k, keywords):
         results = self.collection.query(query_texts=[keywords], n_results=int(k))
-        print([doc[:500] for doc in results["documents"][0]])
-        print(results["metadatas"])
+        return results
+        # print([doc[:500] for doc in results["documents"][0]])
+        # print(results["metadatas"])

@@ -32,22 +32,33 @@ class FIFOScheduler(BaseScheduler):
                     f"{agent_request.agent_name} is executing. \n", "execute"
                 )
                 agent_request.set_start_time(time.time())
+                
                 self.execute_request(agent_request)
+
                 self.logger.log(
-                    f"Current request of {agent_request.agent_name} is done. Thread ID is {agent_request.get_pid()}\n",
-                    "done",
+                    f"Current request of {agent_request.agent_name} is done. Thread ID is {agent_request.get_pid()}\n", "done"
                 )
 
             except Empty:
                 pass
+
             except Exception:
                 traceback.print_exc()
 
     def execute_request(self, agent_request):
         action_type = agent_request.query.action_type
+
+        response = self.llm.address_request(agent_request)
+
         if action_type == "message_llm":
-            self.llm.address_request(agent_request)
+            agent_request.set_response(response)
             
+            # self.llm.address_request(agent_request)
+
         elif action_type == "operate_file":
             api_calls = self.lsfs_parser.parse(agent_request)
-            self.lsfs.execute_calls(api_calls)
+            response = self.lsfs.execute_calls(api_calls)
+            agent_request.set_response(response)
+            
+        agent_request.set_status("done")
+        agent_request.set_end_time(time.time())

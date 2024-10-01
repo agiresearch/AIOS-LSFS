@@ -10,6 +10,8 @@ import os
 
 from pyopenagi.utils.chat_template import Query
 
+from pyopenagi.utils.chat_template import Response
+
 
 class LSFSSupervisor(FileSystemEventHandler):
     def __init__(self, mount_dir) -> None:
@@ -135,7 +137,7 @@ class LSFSParser:
                             },
                             "k": {
                                 "type": "string",
-                                "default": "1",
+                                "default": "3",
                                 "description": "top k files to be retrieved",
                             },
                             "keywords": {
@@ -215,9 +217,8 @@ class LSFSParser:
         )
         agent_request.query = query
 
-        self.llm.address_request(agent_request)
+        response = self.llm.address_request(agent_request)
 
-        response = agent_request.get_response()
         api_calls = response.tool_calls
 
         return api_calls
@@ -249,14 +250,10 @@ class LSFS:
         # self.observer.join()
 
     def execute_calls(self, api_calls):
-        # pass
-        # print(agent_request)
-        # api_calls = self.lsfs_parser.parse(agent_request)
-        for api_call in api_calls:
-            name, params = api_call["name"], api_call["parameters"]
-            # print(name, params)
-            self.api_map[name](params)
-            # self.api_map[name](params=params)
+        api_call = api_calls[0]
+        # for api_call in api_calls:
+        name, params = api_call["name"], api_call["parameters"]
+        return self.api_map[name](params)
 
     def terminate(self):
         self.is_start = False
@@ -269,12 +266,32 @@ class LSFS:
         pass
 
     def retrieve_summary(self, params):
-        print(params)
+        # print(params)
         name = params["name"] if "name" in params else None
         k = params["k"] if "k" in params else None
         keywords = params["keywords"] if "keywords" in params else None
         if k and keywords:
-            self.vector_db.retrieve(name, k, keywords)
+            results = self.vector_db.retrieve(name, k, keywords)
+            chosen_results = self.choose_result(results)
+            return chosen_results
+
+    def choose_result(self, results):
+        result_list = []
+        documents = results["documents"][0]
+        metadatas = results["metadatas"][0]
+
+        for i, r in enumerate(zip(documents, metadatas)):
+            result_list.append(
+                f"{i+1}. "
+                + r[1]["file_path"]
+                + "\n[Part of the file content is]\n "
+                + r[0][:500]
+            )
+        result_list.append(
+            "Choose the file number which is correctly retrived based on your query: "
+        )
+        file_numbers = int(input("\n\n".join(result_list)))
+        return Response(response_message=result_list[file_numbers - 1])
 
     def change_summary(self, params):
         pass

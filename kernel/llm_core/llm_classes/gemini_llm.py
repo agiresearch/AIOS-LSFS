@@ -84,28 +84,39 @@ class GeminiLLM(BaseLLM):
             if tools:
                 tool_calls = self.parse_tool_calls(result)
                 if tool_calls:
-                    agent_request.set_response(
-                        Response(
-                            response_message=None,
-                            tool_calls=tool_calls
-                        )
+                    # agent_request.set_response(
+                    #     Response(
+                    #         response_message=None,
+                    #         tool_calls=tool_calls
+                    #     )
+                    # )
+                    response = Response(
+                        response_message=None,
+                        tool_calls=tool_calls
                     )
                 else:
-                    agent_request.set_response(
-                        Response(
-                            response_message=result,
-                        )
+                    # agent_request.set_response(
+                        
+                    # )
+                    response = Response(
+                        response_message=result,
                     )
             else:
                 if message_return_type == "json":
                     result = self.parse_json_format(result)
-                agent_request.set_response(
-                    Response(
-                        response_message=result,
-                    )
+                    
+                # agent_request.set_response(
+                #     Response(
+                #         response_message=result,
+                #     )
+                # )
+                response = Response(
+                    response_message=result,
                 )
         except IndexError:
             raise IndexError(f"{self.model_name} can not generate a valid result, please try again")
-        agent_request.set_status("done")
-        agent_request.set_end_time(time.time())
-        return
+        
+        # agent_request.set_status("done")
+        # agent_request.set_end_time(time.time())
+        # return
+        return response

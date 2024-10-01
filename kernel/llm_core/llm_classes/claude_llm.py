@@ -86,33 +86,50 @@ class ClaudeLLM(BaseLLM):
             self.logger.log(f"API Response: {response_message}", level="info")
             tool_calls = self.parse_tool_calls(response_message) if tools else None
 
-            agent_request.set_response(
-                Response(
-                    response_message=response_message,
-                    tool_calls=tool_calls
-                )
+            response = Response(
+                response_message=response_message,
+                tool_calls=tool_calls
             )
+            
+            # agent_request.set_response(
+            #     Response(
+            #         response_message=response_message,
+            #         tool_calls=tool_calls
+            #     )
+            # )
         except anthropic.APIError as e:
             error_message = f"Anthropic API error: {str(e)}"
             self.logger.log(error_message, level="warning")
-            agent_request.set_response(
-                Response(
-                    response_message=f"Error: {str(e)}",
-                    tool_calls=None
-                )
+            
+            response = Response(
+                response_message=f"Error: {str(e)}",
+                tool_calls=None
             )
+            
+            # agent_request.set_response(
+            #     Response(
+            #         response_message=f"Error: {str(e)}",
+            #         tool_calls=None
+            #     )
+            # )
+            
         except Exception as e:
             error_message = f"Unexpected error: {str(e)}"
             self.logger.log(error_message, level="warning")
-            agent_request.set_response(
-                Response(
-                    response_message=f"Unexpected error: {str(e)}",
-                    tool_calls=None
-                )
+            # agent_request.set_response(
+            #     Response(
+            #         response_message=f"Unexpected error: {str(e)}",
+            #         tool_calls=None
+            #     )
+            # )
+            response = Response(
+                response_message=f"Unexpected error: {str(e)}",
+                tool_calls=None
             )
-
-        agent_request.set_status("done")
-        agent_request.set_end_time(time.time())
+        
+        return response
+        # agent_request.set_status("done")
+        # agent_request.set_end_time(time.time())
 
     def _convert_to_anthropic_messages(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """

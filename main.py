@@ -73,7 +73,7 @@ def main():
     startScheduler()
     
     agent_tasks = [
-        ["file_management/retrieve_agent", "Help me find the file which is related to filesystem"]
+        ["file_management/retrieve_agent", "Help me find 3 files whose authors are from Rutgers University"]
     ]
     
     for (name, task) in agent_tasks:

@@ -30,7 +30,6 @@ class LLM:
                  use_backend: str = None
         ):
 
-
         # For API-based LLM
         if llm_name in MODEL_REGISTRY.keys():
             self.model = MODEL_REGISTRY[llm_name](
@@ -74,4 +73,4 @@ class LLM:
             agent_request: AgentProcess object that contains request sent from the agent
             temperature (float, optional): Parameter to control the randomness of LLM output. Defaults to 0.0.
         """
-        self.model.address_request(agent_request,temperature)
+        return self.model.address_request(agent_request, temperature)

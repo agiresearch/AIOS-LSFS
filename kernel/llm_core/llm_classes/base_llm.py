@@ -130,8 +130,7 @@ class BaseLLM(ABC):
                         agent_request,
                         temperature=0.0
                         ):
-        self.process(agent_request)
-        return
+        return self.process(agent_request)
 
     @abstractmethod
     def process(self,
