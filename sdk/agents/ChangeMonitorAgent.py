@@ -1,11 +1,11 @@
-from pyopenagi.agents.base_agent import BaseAgent
+from sdk.agents.base_agent import BaseAgent
 import time
 from aios.hooks.request import AgentProcess
-from pyopenagi.utils.chat_template import Query
+from sdk.utils.chat_template import Query
 from aios.storage.db_sdk import Data_Op
 import threading
 import argparse
-from pyopenagi.utils.filereader import update_file
+from sdk.utils.filereader import update_file
 
 from concurrent.futures import as_completed
 import re

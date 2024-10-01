@@ -5,7 +5,7 @@ from ..base import BaseTool
 from typing import List
 # from pydantic import root_validator
 
-from pyopenagi.utils.utils import get_from_env
+from sdk.utils.utils import get_from_env
 
 class BingSearch(BaseTool):
     """Bing Search Tool, refactored from langchain.

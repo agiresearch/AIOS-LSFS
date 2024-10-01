@@ -23,7 +23,7 @@ from aios.hooks.stores import queue as QueueStore, processes as ProcessStore
 
 from aios.hooks.utils import generate_random_string
 
-from pyopenagi.agents.agent_factory import AgentFactory
+from sdk.agents.agent_factory import AgentFactory
 
 ids = []
 

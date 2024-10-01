@@ -4,7 +4,7 @@ import time
 import anthropic
 from typing import List, Dict, Any
 from .base_llm import BaseLLM
-from pyopenagi.utils.chat_template import Response
+from sdk.utils.chat_template import Response
 
 class ClaudeLLM(BaseLLM):
     """

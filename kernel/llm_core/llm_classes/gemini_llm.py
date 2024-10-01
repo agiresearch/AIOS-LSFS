@@ -7,7 +7,7 @@ import time
 from ...utils.utils import get_from_env
 import json
 
-from pyopenagi.utils.chat_template import Response
+from sdk.utils.chat_template import Response
 class GeminiLLM(BaseLLM):
     def __init__(self, llm_name: str,
                  max_gpu_memory: dict = None,

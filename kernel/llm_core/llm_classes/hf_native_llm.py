@@ -6,7 +6,7 @@ from .base_llm import BaseLLM
 import time
 from transformers import AutoTokenizer
 
-from pyopenagi.utils.chat_template import Response
+from sdk.utils.chat_template import Response
 
 from ...utils.utils import get_from_env
 

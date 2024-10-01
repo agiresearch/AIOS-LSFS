@@ -7,7 +7,7 @@ from openai import OpenAI
 
 import openai
 
-from pyopenagi.utils.chat_template import Response
+from sdk.utils.chat_template import Response
 import json
 
 

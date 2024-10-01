@@ -1,10 +1,4 @@
-# AIOS-LSFS
-From Commands to Prompts: LLM-based Semantic File System for AIOS
-
-## 🏠 Architecture of LSFS
-<p align="center">
-<img src="assets/lsfs-arc.png">
-</p>
+From Commands to Prompts: LLM-based Semantic File System
 
 ## 🚀 Quickstart
 

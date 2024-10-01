@@ -8,9 +8,9 @@ from watchdog.events import FileSystemEventHandler
 
 import os
 
-from pyopenagi.utils.chat_template import Query
+from sdk.utils.chat_template import Query
 
-from pyopenagi.utils.chat_template import Response
+from sdk.utils.chat_template import Response
 
 
 class LSFSSupervisor(FileSystemEventHandler):

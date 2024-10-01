@@ -3,7 +3,7 @@ import os
 
 import time
 
-from pyopenagi.utils.chat_template import Query
+from sdk.utils.chat_template import Query
 
 import json
 

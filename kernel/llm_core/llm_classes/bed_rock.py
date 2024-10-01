@@ -4,7 +4,7 @@ import re
 from .base_llm import BaseLLM
 import time
 
-from pyopenagi.utils.chat_template import Response
+from sdk.utils.chat_template import Response
 
 class BedrockLLM(BaseLLM):
 

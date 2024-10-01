@@ -2,7 +2,7 @@ from ..base import BaseRapidAPITool
 
 # from pydantic import root_validator
 
-from pyopenagi.utils.utils import get_from_env
+from sdk.utils.utils import get_from_env
 
 import requests
 

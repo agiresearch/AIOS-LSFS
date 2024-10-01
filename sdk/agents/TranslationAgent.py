@@ -1,5 +1,5 @@
 
-from pyopenagi.agents.base_agent import BaseAgent
+from sdk.agents.base_agent import BaseAgent
 
 import time
 
@@ -7,7 +7,7 @@ from aios.hooks.request import (
     AgentProcess
 )
 
-from pyopenagi.utils.chat_template import Query
+from sdk.utils.chat_template import Query
 from aios_base.storage.db_sdk import Data_Op
 import threading
 import argparse
@@ -19,7 +19,7 @@ import os
 import logging
 import subprocess
 import redis
-from pyopenagi.utils.filereader import update_file
+from sdk.utils.filereader import update_file
 
 import numpy as np
 
