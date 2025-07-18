@@ -25,7 +25,7 @@ try:
 except ImportError:
     raise ImportError(
         "Could not import autogen python package. "
-        "Please install it with `pip install pyautogen`."
+        "Please install it with `pip install ag2`."
     )
 
 logger = SDKLogger("Autogen Adapter")
